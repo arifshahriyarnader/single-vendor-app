@@ -3,6 +3,7 @@ const router = express.Router();
 const User = require("../../models/User");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const authenticateToken=require('../../middleware/auth');
 
 //register
 router.post("/register", async (req, res) => {
@@ -39,6 +40,23 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ message: "Something went wrong" });
   }
 });
+
+//user profile
+router.get('/user-profile', authenticateToken, async(req,res)  =>{
+  try{
+    const id=req.user._id;
+    const user= await User.findById(id)
+    if(user){
+      return res.json(user)
+    }
+    else{
+      return res.status(500).json({message:"User not found"})
+    }
+  }
+  catch(error){
+    res.status(500).json({message:"Something went wrong"});
+  }
+})
 
 //get all user
 router.get("/", async (req, res) => {
