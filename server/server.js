@@ -11,8 +11,9 @@ app.use(bodyParser.json());
 connectDB()
 
 //routes
-//users routes
 app.use('/api/users', require('./routes/api/users'))
+app.use('/api/orders', require('./routes/api/orders'))
+app.use('/api/products', require('./routes/api/products'))
 
 //To chek if our application is runnng
 app.get('/', (req,res) =>{
