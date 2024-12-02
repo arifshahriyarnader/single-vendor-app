@@ -162,4 +162,21 @@ router.get("/", authenticateToken, async (req, res) => {
   }
 });
 
+//get specific product
+router.get('/:id', authenticateToken, async(req,res) =>{
+  try{
+    const id=req.params.id;
+    const product=await Product.findById(id).populate(['userId', 'fileId']).exec();
+    if(product){
+      return res.json(product)
+    }
+    else{
+      return res.status(404).json({message:"Product not found"})
+    }
+  }
+  catch(error){
+    res.status(500).json({ message: "something went wrong" });
+  }
+})
+
 module.exports = router;
