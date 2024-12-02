@@ -179,4 +179,27 @@ router.get('/:id', authenticateToken, async(req,res) =>{
   }
 })
 
+//get update product
+router.put('/:id', authenticateToken, async(req,res) =>{
+  try{
+    if(req.user.userType != 'admin'){
+      return res.status(401).json({message:"You are not an admin"})
+    }
+    else{
+      const id=req.params.id;
+      const body=req.body;
+      const updateProduct=await Product.findByIdAndUpdate(id,body,{new:true})
+      if(updateProduct){
+        return res.json(updateProduct)
+      }
+      else{
+        return res.status(404).json({message:"Product not found"})
+      }
+    }
+  }
+  catch(error){
+    res.status(500).json({ message: "something went wrong" });
+  }
+})
+
 module.exports = router;
