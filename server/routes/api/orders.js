@@ -4,6 +4,7 @@ const Order = require("../../models/Order");
 const authenticateToken = require("../../middleware/auth");
 const { body, validationResult } = require("express-validator");
 const Product = require("../../models/Product");
+const { default: mongoose } = require("mongoose");
 
 //create an order
 router.post(
@@ -48,5 +49,75 @@ router.post(
     }
   }
 );
+
+//get all orders by user
+router.get('/', authenticateToken, async(req,res) =>{
+    try{
+        let current = req?.query?.current ??  "1";
+        current=parseInt(current);
+        let pageSize=req?.query?.pageSize ?? "1";
+        pageSize=parseInt(pageSize);
+        const sort=req?.query?.sort ?? "asc";
+
+        const pipeline=[];
+
+        pipeline.push({
+            $match:{
+                userId:new mongoose.Types.ObjectId(req.user._id),
+            },
+        })
+
+        switch (sort) {
+            case "asc":
+              pipeline.push({
+                $sort: {
+                  createdAt: 1,
+                },
+              });
+              break;
+      
+            case "desc":
+              pipeline.push({
+                $sort: {
+                  createdAt: -1,
+                },
+              });
+              break;
+          }
+      
+          pipeline.push({
+            $skip: (current - 1) * pageSize,
+          });
+      
+          pipeline.push({
+            $limit: pageSize * 1,
+          });
+      
+          pipeline.push({
+            $lookup: {
+              from: "users",
+              localField: "userId",
+              foreignField: "_id",
+              as: "user",
+            },
+          });
+      
+          pipeline.push({
+            $lookup: {
+              from: "products",
+              localField: "productId",
+              foreignField: "_id",
+              as: "product",
+            },
+          });
+      
+          const orders = await Order.aggregate(pipeline);
+          return res.json(orders);
+
+    }
+    catch(error){
+        res.status(500).json({ message: "Something went wrong" });
+    }
+})
 
 module.exports = router;
