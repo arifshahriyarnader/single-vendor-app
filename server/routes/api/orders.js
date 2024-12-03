@@ -120,4 +120,45 @@ router.get('/', authenticateToken, async(req,res) =>{
     }
 })
 
+//get my order
+router.get('/:id', authenticateToken, async(req,res) =>{
+    try{
+        const order=await Order.findOne({
+            _id:req.params.id,
+             userId:req.user._id,
+            }).populate(['productId', 'userId']).exec();
+            if(order){
+                return res.json(order)
+            }
+            else{
+                return res.status(404).json({message:"Order not found"})
+            }
+    }
+    catch(error){
+        res.status(500).json({ message: "Something went wrong" });
+    }
+})
+
+//get specific order details by admin
+router.get('/admin/:id', authenticateToken, async(req,res) =>{
+    try{
+        if(req.user.userType != 'admin'){
+            res.status(401).json({message:"You are not an admin"})
+        }
+        else{
+            const order=await Order.findById(req.params.id)
+            .populate(['productId', 'userId']).exec();
+            if(order){
+                return res.json(order)
+            }
+            else{
+                return res.status(404).json({message:"Order not found"})
+            }
+        }
+    }
+    catch(error){
+        res.status(500).json({ message: "Something went wrong" });
+    }
+})
+
 module.exports = router;
