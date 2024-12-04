@@ -51,114 +51,130 @@ router.post(
 );
 
 //get all orders by user
-router.get('/', authenticateToken, async(req,res) =>{
-    try{
-        let current = req?.query?.current ??  "1";
-        current=parseInt(current);
-        let pageSize=req?.query?.pageSize ?? "1";
-        pageSize=parseInt(pageSize);
-        const sort=req?.query?.sort ?? "asc";
+router.get("/", authenticateToken, async (req, res) => {
+  try {
+    let current = req?.query?.current ?? "1";
+    current = parseInt(current);
+    let pageSize = req?.query?.pageSize ?? "1";
+    pageSize = parseInt(pageSize);
+    const sort = req?.query?.sort ?? "asc";
 
-        const pipeline=[];
+    const pipeline = [];
 
+    pipeline.push({
+      $match: {
+        userId: new mongoose.Types.ObjectId(req.user._id),
+      },
+    });
+
+    switch (sort) {
+      case "asc":
         pipeline.push({
-            $match:{
-                userId:new mongoose.Types.ObjectId(req.user._id),
-            },
-        })
+          $sort: {
+            createdAt: 1,
+          },
+        });
+        break;
 
-        switch (sort) {
-            case "asc":
-              pipeline.push({
-                $sort: {
-                  createdAt: 1,
-                },
-              });
-              break;
-      
-            case "desc":
-              pipeline.push({
-                $sort: {
-                  createdAt: -1,
-                },
-              });
-              break;
-          }
-      
-          pipeline.push({
-            $skip: (current - 1) * pageSize,
-          });
-      
-          pipeline.push({
-            $limit: pageSize * 1,
-          });
-      
-          pipeline.push({
-            $lookup: {
-              from: "users",
-              localField: "userId",
-              foreignField: "_id",
-              as: "user",
-            },
-          });
-      
-          pipeline.push({
-            $lookup: {
-              from: "products",
-              localField: "productId",
-              foreignField: "_id",
-              as: "product",
-            },
-          });
-      
-          const orders = await Order.aggregate(pipeline);
-          return res.json(orders);
+      case "desc":
+        pipeline.push({
+          $sort: {
+            createdAt: -1,
+          },
+        });
+        break;
+    }
 
-    }
-    catch(error){
-        res.status(500).json({ message: "Something went wrong" });
-    }
-})
+    pipeline.push({
+      $skip: (current - 1) * pageSize,
+    });
+
+    pipeline.push({
+      $limit: pageSize * 1,
+    });
+
+    pipeline.push({
+      $lookup: {
+        from: "users",
+        localField: "userId",
+        foreignField: "_id",
+        as: "user",
+      },
+    });
+
+    pipeline.push({
+      $lookup: {
+        from: "products",
+        localField: "productId",
+        foreignField: "_id",
+        as: "product",
+      },
+    });
+
+    const orders = await Order.aggregate(pipeline);
+    return res.json(orders);
+  } catch (error) {
+    res.status(500).json({ message: "Something went wrong" });
+  }
+});
 
 //get my order
-router.get('/:id', authenticateToken, async(req,res) =>{
-    try{
-        const order=await Order.findOne({
-            _id:req.params.id,
-             userId:req.user._id,
-            }).populate(['productId', 'userId']).exec();
-            if(order){
-                return res.json(order)
-            }
-            else{
-                return res.status(404).json({message:"Order not found"})
-            }
+router.get("/:id", authenticateToken, async (req, res) => {
+  try {
+    const order = await Order.findOne({
+      _id: req.params.id,
+      userId: req.user._id,
+    })
+      .populate(["productId", "userId"])
+      .exec();
+    if (order) {
+      return res.json(order);
+    } else {
+      return res.status(404).json({ message: "Order not found" });
     }
-    catch(error){
-        res.status(500).json({ message: "Something went wrong" });
-    }
-})
+  } catch (error) {
+    res.status(500).json({ message: "Something went wrong" });
+  }
+});
 
 //get specific order details by admin
-router.get('/admin/:id', authenticateToken, async(req,res) =>{
-    try{
-        if(req.user.userType != 'admin'){
-            res.status(401).json({message:"You are not an admin"})
-        }
-        else{
-            const order=await Order.findById(req.params.id)
-            .populate(['productId', 'userId']).exec();
-            if(order){
-                return res.json(order)
-            }
-            else{
-                return res.status(404).json({message:"Order not found"})
-            }
-        }
+router.get("/admin/:id", authenticateToken, async (req, res) => {
+  try {
+    if (req.user.userType != "admin") {
+      res.status(401).json({ message: "You are not an admin" });
+    } else {
+      const order = await Order.findById(req.params.id)
+        .populate(["productId", "userId"])
+        .exec();
+      if (order) {
+        return res.json(order);
+      } else {
+        return res.status(404).json({ message: "Order not found" });
+      }
     }
-    catch(error){
-        res.status(500).json({ message: "Something went wrong" });
+  } catch (error) {
+    res.status(500).json({ message: "Something went wrong" });
+  }
+});
+
+//cancel my order
+router.put("/cancel/:id", authenticateToken, async (req, res) => {
+  try {
+    const updateOrder = await Order.findOneAndUpdate(
+      { _id: req.params.id, userId: req.user._id },
+      { deliveryStatus: "canceled" },
+      { new: true }
+    )
+      .populate(["productId", "userId"])
+      .exec();
+    if (updateOrder) {
+      return res.json(updateOrder);
+    } else {
+      return res.status(404).json({ message: "Order not found" });
     }
-})
+  } catch (error) {
+    res.status(500).json({ message: "Something went wrong" });
+  }
+});
 
 module.exports = router;
