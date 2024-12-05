@@ -194,9 +194,7 @@ router.put(
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
-      } 
-     
-      else {
+      } else {
         if (req.user.userType != "admin") {
           return res.status(401).json({ message: "You are not an admin" });
         } else {
@@ -205,12 +203,57 @@ router.put(
             { deliveryStatus: req.body.deliveryStatus },
             { new: true }
           )
-          .populate(["productId", "userId"])
+            .populate(["productId", "userId"])
             .exec();
           if (updatedOrder) {
             return res.json(updatedOrder);
           } else {
             return res.status(404).json({ message: "Order not found" });
+          }
+        }
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Something went wrong" });
+    }
+  }
+);
+
+//update an existing order
+router.put(
+  "/:id",
+  [
+    authenticateToken,
+    body("deliveryLocation", "deliveryLocation is required").notEmpty(),
+    body("qty", "Qty is required").notEmpty(),
+    body("productId", "productId is required").notEmpty(),
+  ],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      } else {
+        if (req.user.userType != "admin") {
+          return res.status(401).json({ message: "You are not an admin" });
+        } else {
+          const productId = req.body.productId;
+          const product = await Product.findById(productId);
+          if (!product) {
+            return res.status(404).json({ message: "product not found" });
+          } else {
+            req.body.total = req.body.qty * product.price;
+          }
+          const updateOrder = await Order.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true }
+          )
+            .populate(["productId", "userId"])
+            .exec();
+          if (updateOrder) {
+            return res.json(updateOrder);
+          } else {
+            return res.status(404).json({ message: "order not found" });
           }
         }
       }
