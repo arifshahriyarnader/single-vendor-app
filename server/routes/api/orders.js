@@ -194,16 +194,13 @@ router.put(
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
-        console.log("Authenticated User:", req.user);
-        console.log("Request Params ID:", req.params.id);
-        console.log("Request Body:", req.body);
       } 
      
       else {
         if (req.user.userType != "admin") {
           return res.status(401).json({ message: "You are not an admin" });
         } else {
-          const updatedOrder = await Order.findOneAndUpdate(
+          const updatedOrder = await Order.findByIdAndUpdate(
             { _id: req.params.id, userId: req.user._id },
             { deliveryStatus: req.body.deliveryStatus },
             { new: true }
@@ -222,5 +219,24 @@ router.put(
     }
   }
 );
+
+//Delete an order
+router.delete("/:id", authenticateToken, async (req, res) => {
+  try {
+    if (req.user.userType != "admin") {
+      return res.status(401).json({ message: "You are not an admin" });
+    } else {
+      const id = req.params.id;
+      const deletedOrder = await Order.findByIdAndDelete(id);
+      if (deletedOrder) {
+        return res.json({ message: "Order is deleted" });
+      } else {
+        return res.status(404).json({ message: "Order not found" });
+      }
+    }
+  } catch (error) {
+    res.status(500).json({ message: "Something went wrong" });
+  }
+});
 
 module.exports = router;
